@@ -378,12 +378,16 @@ jobs:
         if: env.UPLOAD_ARTIFACT == 'true'
         run: |
           pushd ./res/msi
+          # preprocess.py looks for <app-name>.exe in the dist; name it ViewTitan.exe while the MSI is built
+          Move-Item ../../rustdesk/rustdesk.exe ../../rustdesk/ViewTitan.exe -Force
           python preprocess.py --arp -d ../../rustdesk -c --app-name ViewTitan -m ViewTitan
+          if ($LASTEXITCODE -ne 0) { throw "preprocess.py failed" }
           nuget restore msi.sln
           $msiPlatform = if ('${{ matrix.job.arch }}' -eq 'aarch64') { 'ARM64' } else { 'x64' }
           msbuild msi.sln -p:Configuration=Release -p:Platform=$msiPlatform /p:TargetVersion=Windows10
           $msi = Get-ChildItem ./Package/bin/*/Release/en-us/Package.msi | Select-Object -First 1
           mv $msi.FullName ../../SignOutput/rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.msi
+          Move-Item ../../rustdesk/ViewTitan.exe ../../rustdesk/rustdesk.exe -Force
           sha256sum ../../SignOutput/rustdesk-*.msi
 
       - name: Build pre-built MSI template
