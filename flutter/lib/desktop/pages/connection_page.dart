@@ -344,11 +344,18 @@ class _ConnectionPageState extends State<ConnectionPage>
   /// Search for a peer.
   Widget _buildRemoteIDTextField(BuildContext context) {
     var w = Container(
-      width: 320 + 20 * 2,
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 22),
+      width: 380 + 20 * 2,
+      padding: const EdgeInsets.fromLTRB(22, 22, 22, 22),
       decoration: BoxDecoration(
-          borderRadius: const BorderRadius.all(Radius.circular(13)),
-          border: Border.all(color: Theme.of(context).colorScheme.background)),
+          color: Theme.of(context).colorScheme.background,
+          borderRadius: const BorderRadius.all(Radius.circular(16)),
+          border: Border.all(color: Theme.of(context).dividerColor),
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withOpacity(0.06),
+                blurRadius: 18,
+                offset: const Offset(0, 8)),
+          ]),
       child: Ink(
         child: Column(
           children: [
@@ -421,14 +428,25 @@ class _ConnectionPageState extends State<ConnectionPage>
                           focusNode: fieldFocusNode,
                           style: const TextStyle(
                             fontFamily: 'WorkSans',
-                            fontSize: 22,
+                            fontSize: 24,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1.2,
                             height: 1.4,
                           ),
                           maxLines: 1,
                           cursorColor:
                               Theme.of(context).textTheme.titleLarge?.color,
                           decoration: InputDecoration(
-                              filled: false,
+                              filled: true,
+                              fillColor: MyTheme.accent.withOpacity(0.05),
+                              enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(
+                                      color: MyTheme.accent.withOpacity(0.35))),
+                              focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(
+                                      color: MyTheme.accent, width: 1.8)),
                               counterText: '',
                               hintText: _idInputFocused.value
                                   ? null
@@ -516,21 +534,46 @@ class _ConnectionPageState extends State<ConnectionPage>
               ],
             ),
             Padding(
-              padding: const EdgeInsets.only(top: 13.0),
+              padding: const EdgeInsets.only(top: 16.0),
               child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 46.0,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: MyTheme.accent,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: () {
+                        onConnect();
+                      },
+                      icon: const Icon(Icons.arrow_forward_rounded, size: 20),
+                      label: Text(translate("Connect"),
+                          style: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w700)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
                 SizedBox(
-                  height: 28.0,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      onConnect();
-                    },
-                    child: Text(translate("Connect")),
+                  height: 46.0,
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: () => onConnect(isFileTransfer: true),
+                    icon: const Icon(Icons.folder_open_rounded, size: 19),
+                    label: Text(translate("Transfer file")),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Container(
-                  height: 28.0,
-                  width: 28.0,
+                  height: 46.0,
+                  width: 46.0,
                   decoration: BoxDecoration(
                     border: Border.all(color: Theme.of(context).dividerColor),
                     borderRadius: BorderRadius.circular(8),

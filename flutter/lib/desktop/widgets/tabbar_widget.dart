@@ -525,16 +525,26 @@ class _DesktopTabState extends State<DesktopTab>
         if (stateGlobal.showTabBar.isTrue &&
             !(kUseCompatibleUiMode && isHideSingleItem())) {
           final showBottomDivider = _showTabBarBottomDivider(tabType);
+          // ViewTitan: brand gradient line under the main window's tab bar.
+          final brandLine = tabType == DesktopTabType.main;
+          final dividerHeight = brandLine ? 3.0 : (showBottomDivider ? 1.0 : 0.0);
           return SizedBox(
             height: _kTabBarHeight,
             child: Column(
               children: [
                 SizedBox(
-                  height:
-                      showBottomDivider ? _kTabBarHeight - 1 : _kTabBarHeight,
+                  height: _kTabBarHeight - dividerHeight,
                   child: _buildBar(),
                 ),
-                if (showBottomDivider)
+                if (brandLine)
+                  Container(
+                    height: dividerHeight,
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                          colors: [Color(0xFF1D4ED8), Color(0xFF0EA5E9)]),
+                    ),
+                  )
+                else if (showBottomDivider)
                   const Divider(
                     height: 1,
                   ),

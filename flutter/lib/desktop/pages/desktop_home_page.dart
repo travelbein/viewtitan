@@ -63,6 +63,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (!isIncomingOnly) buildNavRail(context),
         buildLeftPane(context),
         if (!isIncomingOnly) const VerticalDivider(width: 1),
         if (!isIncomingOnly) Expanded(child: buildRightPane(context)),
@@ -73,6 +74,158 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   Widget _buildBlock({required Widget child}) {
     return buildRemoteBlock(
         block: _block, mask: true, use: canBeBlocked, child: child);
+  }
+
+  // ViewTitan: dark navigation rail on the far side of the home page.
+  Widget buildNavRail(BuildContext context) {
+    Widget item(IconData icon, String label, GestureTapCallback? onTap,
+        {bool selected = false}) {
+      return Tooltip(
+        message: translate(label),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            width: 66,
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            margin: const EdgeInsets.symmetric(vertical: 3),
+            decoration: BoxDecoration(
+              color: selected ? MyTheme.accent.withOpacity(0.3) : null,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              children: [
+                Icon(icon,
+                    size: 22,
+                    color: selected ? Colors.white : const Color(0xFFCBD5E1)),
+                const SizedBox(height: 4),
+                Text(
+                  translate(label),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      fontSize: 10.5,
+                      color:
+                          selected ? Colors.white : const Color(0xFF94A3B8)),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      width: 78,
+      color: const Color(0xFF0B1220),
+      padding: const EdgeInsets.symmetric(vertical: 14),
+      child: Column(
+        children: [
+          loadIcon(38).marginOnly(bottom: 18),
+          item(Icons.desktop_windows_outlined, 'Home', null, selected: true),
+          if (!bind.isDisableSettings())
+            item(Icons.settings_outlined, 'Settings',
+                () => DesktopTabPage.onAddSetting()),
+          const Spacer(),
+          buildLanguageButton(context),
+          if (!bind.isDisableSettings())
+            item(Icons.info_outline, 'About',
+                () => DesktopTabPage.onAddSetting(
+                    initialPage: SettingsTabKey.about)),
+        ],
+      ),
+    );
+  }
+
+  // ViewTitan: switch the UI language straight from the home page.
+  Widget buildLanguageButton(BuildContext context) {
+    if (isOptionFixed(kCommConfKeyLang)) return const SizedBox.shrink();
+    return Tooltip(
+      message: translate('Language'),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTapDown: (details) async {
+          final langs = jsonDecode(await bind.mainGetLangs()) as List<dynamic>;
+          final current = bind.mainGetLocalOption(key: kCommConfKeyLang);
+          if (!mounted) return;
+          final pos = details.globalPosition;
+          final picked = await showMenu<String>(
+            context: context,
+            position: RelativeRect.fromLTRB(pos.dx, pos.dy, pos.dx, pos.dy),
+            constraints: const BoxConstraints(maxHeight: 420),
+            items: [
+              PopupMenuItem(
+                  value: defaultOptionLang,
+                  child: Text(translate('Default'))),
+              ...langs.map((v) => PopupMenuItem<String>(
+                    value: v[0] as String,
+                    child: Row(
+                      children: [
+                        Expanded(child: Text(v[1] as String)),
+                        if (v[0] == current)
+                          const Icon(Icons.check,
+                              size: 16, color: MyTheme.accent),
+                      ],
+                    ),
+                  )),
+            ],
+          );
+          if (picked == null || picked == current) return;
+          await bind.mainSetLocalOption(key: kCommConfKeyLang, value: picked);
+          reloadAllWindows();
+          bind.mainChangeLanguage(lang: picked);
+        },
+        child: Container(
+          width: 66,
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          margin: const EdgeInsets.symmetric(vertical: 3),
+          child: Column(
+            children: [
+              const Icon(Icons.language, size: 22, color: Color(0xFFCBD5E1)),
+              const SizedBox(height: 4),
+              Text(
+                translate('Language'),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 10.5, color: Color(0xFF94A3B8)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ViewTitan: rounded card that groups the "your desktop" boards.
+  Widget buildBoardCard(BuildContext context, List<Widget> children) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(14, 6, 14, 0),
+      padding: const EdgeInsets.fromLTRB(14, 10, 10, 12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Theme.of(context).dividerColor),
+      ),
+      child: Column(children: children),
+    );
+  }
+
+  Widget copyButton(String Function() text) {
+    return Tooltip(
+      message: translate('Copy'),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: () {
+          Clipboard.setData(ClipboardData(text: text()));
+          showToast(translate('Copied'));
+        },
+        child: const Padding(
+          padding: EdgeInsets.all(6),
+          child: Icon(Icons.copy_rounded, size: 18, color: MyTheme.accent),
+        ),
+      ),
+    );
   }
 
   Widget buildLeftPane(BuildContext context) {
@@ -90,8 +243,9 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         child: loadLogo(),
       ),
       buildTip(context),
-      if (!isOutgoingOnly) buildIDBoard(context),
-      if (!isOutgoingOnly) buildPasswordBoard(context),
+      if (!isOutgoingOnly)
+        buildBoardCard(
+            context, [buildIDBoard(context), buildPasswordBoard(context)]),
       FutureBuilder<Widget>(
         future: Future.value(
             Obx(() => buildHelpCards(stateGlobal.updateUrl.value))),
@@ -129,7 +283,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     return ChangeNotifierProvider.value(
       value: gFFI.serverModel,
       child: Container(
-        width: isIncomingOnly ? 280.0 : 200.0,
+        width: isIncomingOnly ? 280.0 : 300.0,
         color: Theme.of(context).colorScheme.background,
         child: Stack(
           children: [
@@ -187,69 +341,58 @@ class _DesktopHomePageState extends State<DesktopHomePage>
 
   buildIDBoard(BuildContext context) {
     final model = gFFI.serverModel;
-    return Container(
-      margin: const EdgeInsets.only(left: 20, right: 11),
-      height: 57,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.baseline,
-        textBaseline: TextBaseline.alphabetic,
-        children: [
-          Container(
-            width: 2,
-            decoration: const BoxDecoration(color: MyTheme.accent),
-          ).marginOnly(top: 5),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(left: 7),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    height: 25,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          translate("ID"),
-                          style: TextStyle(
-                              fontSize: 14,
-                              color: Theme.of(context)
-                                  .textTheme
-                                  .titleLarge
-                                  ?.color
-                                  ?.withOpacity(0.5)),
-                        ).marginOnly(top: 5),
-                        buildPopupMenu(context)
-                      ],
-                    ),
-                  ),
-                  Flexible(
-                    child: GestureDetector(
-                      onDoubleTap: () {
-                        Clipboard.setData(
-                            ClipboardData(text: model.serverId.text));
-                        showToast(translate("Copied"));
-                      },
-                      child: TextFormField(
-                        controller: model.serverId,
-                        readOnly: true,
-                        decoration: InputDecoration(
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.only(top: 10, bottom: 10),
-                        ),
-                        style: TextStyle(
-                          fontSize: 22,
-                        ),
-                      ).workaroundFreezeLinuxMint(),
-                    ),
-                  )
-                ],
-              ),
+    final labelColor =
+        Theme.of(context).textTheme.titleLarge?.color?.withOpacity(0.55);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              translate("ID"),
+              style: TextStyle(
+                  fontSize: 13, fontWeight: FontWeight.w600, color: labelColor),
             ),
+            buildPopupMenu(context)
+          ],
+        ),
+        const SizedBox(height: 4),
+        Container(
+          padding: const EdgeInsets.only(left: 12, right: 4),
+          decoration: BoxDecoration(
+            color: MyTheme.accent.withOpacity(0.06),
+            borderRadius: BorderRadius.circular(11),
+            border: Border.all(color: MyTheme.accent.withOpacity(0.18)),
           ),
-        ],
-      ),
+          child: Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onDoubleTap: () {
+                    Clipboard.setData(ClipboardData(text: model.serverId.text));
+                    showToast(translate("Copied"));
+                  },
+                  child: TextFormField(
+                    controller: model.serverId,
+                    readOnly: true,
+                    decoration: InputDecoration(
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(vertical: 10),
+                    ),
+                    style: TextStyle(
+                      fontSize: 25,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.2,
+                    ),
+                  ).workaroundFreezeLinuxMint(),
+                ),
+              ),
+              copyButton(() => model.serverId.text),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -295,29 +438,32 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     final showOneTime = model.approveMode != 'click' &&
         model.verificationMethod != kUsePermanentPassword;
     return Container(
-      margin: EdgeInsets.only(left: 20.0, right: 16, top: 13, bottom: 13),
+      margin: EdgeInsets.only(top: 12),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.baseline,
-        textBaseline: TextBaseline.alphabetic,
         children: [
-          Container(
-            width: 2,
-            height: 52,
-            decoration: BoxDecoration(color: MyTheme.accent),
-          ),
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.only(left: 7),
+              padding: const EdgeInsets.only(left: 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   AutoSizeText(
                     translate("One-time Password"),
                     style: TextStyle(
-                        fontSize: 14, color: textColor?.withOpacity(0.5)),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: textColor?.withOpacity(0.55)),
                     maxLines: 1,
-                  ),
-                  Row(
+                  ).marginOnly(bottom: 4),
+                  Container(
+                    padding: const EdgeInsets.only(left: 12, right: 4),
+                    decoration: BoxDecoration(
+                      color: MyTheme.accent.withOpacity(0.06),
+                      borderRadius: BorderRadius.circular(11),
+                      border:
+                          Border.all(color: MyTheme.accent.withOpacity(0.18)),
+                    ),
+                    child: Row(
                     children: [
                       Expanded(
                         child: GestureDetector(
@@ -334,12 +480,17 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                             decoration: InputDecoration(
                               border: InputBorder.none,
                               contentPadding:
-                                  EdgeInsets.only(top: 14, bottom: 10),
+                                  EdgeInsets.symmetric(vertical: 10),
                             ),
-                            style: TextStyle(fontSize: 15),
+                            style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 1),
                           ).workaroundFreezeLinuxMint(),
                         ),
                       ),
+                      if (showOneTime)
+                        copyButton(() => model.serverPasswd.text),
                       if (showOneTime)
                         AnimatedRotationWidget(
                           onPressed: () => bind.mainUpdateTemporaryPassword(),
@@ -351,7 +502,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                                   Icons.refresh,
                                   color: refreshHover.value
                                       ? textColor
-                                      : Color(0xFFDDDDDD),
+                                      : Color(0xFF94A3B8),
                                   size: 22,
                                 ))),
                           ),
@@ -366,7 +517,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                                 Icons.edit,
                                 color: editHover.value
                                     ? textColor
-                                    : Color(0xFFDDDDDD),
+                                    : Color(0xFF94A3B8),
                                 size: 22,
                               ).marginOnly(right: 8, top: 4),
                             ),
@@ -376,6 +527,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                           onHover: (value) => editHover.value = value,
                         ),
                     ],
+                  ),
                   ),
                 ],
               ),
@@ -605,15 +757,16 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       children: [
         Container(
           margin: EdgeInsets.fromLTRB(
-              0, marginTop, 0, bind.isIncomingOnly() ? marginTop : 0),
+              14, marginTop, 14, bind.isIncomingOnly() ? marginTop : 0),
           child: Container(
               decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
                   gradient: LinearGradient(
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
                 colors: [
-                  Color.fromARGB(255, 226, 66, 188),
-                  Color.fromARGB(255, 244, 114, 124),
+                  Color(0xFF1D4ED8),
+                  Color(0xFF0EA5E9),
                 ],
               )),
               padding: EdgeInsets.all(20),
