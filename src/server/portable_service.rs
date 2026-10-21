@@ -1540,6 +1540,13 @@ pub mod client {
         }
     }
 
+    // ViewTitan: inside an RDP session Windows refuses input from the SYSTEM-side
+    // portable service ("Access is denied"), so inject from the user's own process there.
+    fn service_handles_input() -> bool {
+        RUNNING.lock().unwrap().clone()
+            && unsafe { winuser::GetSystemMetrics(winuser::SM_REMOTESESSION) } == 0
+    }
+
     pub fn handle_mouse(
         evt: &MouseEvent,
         conn: i32,
@@ -1548,7 +1555,7 @@ pub mod client {
         simulate: bool,
         show_cursor: bool,
     ) {
-        if RUNNING.lock().unwrap().clone() {
+        if service_handles_input() {
             crate::input_service::update_latest_input_cursor_time(conn);
             handle_mouse_(evt, conn, username, argb, simulate, show_cursor).ok();
         } else {
@@ -1557,7 +1564,7 @@ pub mod client {
     }
 
     pub fn handle_pointer(evt: &PointerDeviceEvent, conn: i32) {
-        if RUNNING.lock().unwrap().clone() {
+        if service_handles_input() {
             crate::input_service::update_latest_input_cursor_time(conn);
             handle_pointer_(evt, conn).ok();
         } else {
@@ -1566,7 +1573,7 @@ pub mod client {
     }
 
     pub fn handle_key(evt: &KeyEvent) {
-        if RUNNING.lock().unwrap().clone() {
+        if service_handles_input() {
             handle_key_(evt).ok();
         } else {
             crate::input_service::handle_key_(evt);
