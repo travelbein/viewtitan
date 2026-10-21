@@ -13,6 +13,11 @@ on:
         type: boolean
         default: false
 
+# Publishing the installers to the release page needs write access to the repo contents.
+permissions:
+  contents: write
+  actions: read
+
 # NOTE: F-Droid builder script 'flutter/build_fdroid.sh' reads environment
 # variables from this workflow!
 #
