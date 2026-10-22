@@ -355,9 +355,11 @@ jobs:
         if: env.UPLOAD_ARTIFACT == 'true'
         run: |
           sed -i '/dpiAware/d' res/manifest.xml
+          # The installer registers the service and shortcuts as <app-name>.exe, so ship the binary as ViewTitan.exe
+          mv ./rustdesk/rustdesk.exe ./rustdesk/ViewTitan.exe
           pushd ./libs/portable
           pip3 install -r requirements.txt
-          python3 ./generate.py -f ../../rustdesk/ -o . -e ../../rustdesk/rustdesk.exe
+          python3 ./generate.py -f ../../rustdesk/ -o . -e ../../rustdesk/ViewTitan.exe
           popd
           mkdir -p ./SignOutput
           mv ./target/release/rustdesk-portable-packer.exe ./SignOutput/rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.exe
@@ -378,8 +380,6 @@ jobs:
         if: env.UPLOAD_ARTIFACT == 'true'
         run: |
           pushd ./res/msi
-          # preprocess.py looks for <app-name>.exe in the dist; name it ViewTitan.exe while the MSI is built
-          Move-Item ../../rustdesk/rustdesk.exe ../../rustdesk/ViewTitan.exe -Force
           python preprocess.py --arp -d ../../rustdesk -c --app-name ViewTitan -m ViewTitan
           if ($LASTEXITCODE -ne 0) { throw "preprocess.py failed" }
           nuget restore msi.sln
@@ -387,7 +387,6 @@ jobs:
           msbuild msi.sln -p:Configuration=Release -p:Platform=$msiPlatform /p:TargetVersion=Windows10
           $msi = Get-ChildItem ./Package/bin/*/Release/en-us/Package.msi | Select-Object -First 1
           mv $msi.FullName ../../SignOutput/rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.msi
-          Move-Item ../../rustdesk/ViewTitan.exe ../../rustdesk/rustdesk.exe -Force
           sha256sum ../../SignOutput/rustdesk-*.msi
 
       - name: Build pre-built MSI template
@@ -412,7 +411,7 @@ jobs:
         run: |
           git checkout -- res/msi
           cp -r ./rustdesk ./rustdesk-msi-template
-          mv ./rustdesk-msi-template/rustdesk.exe ./rustdesk-msi-template/RDAPPNAM.exe
+          mv ./rustdesk-msi-template/ViewTitan.exe ./rustdesk-msi-template/RDAPPNAM.exe
           Set-Content -Path ./rustdesk-msi-template/custom.txt -Value 'placeholder' -NoNewline
           $assets = './rustdesk-msi-template/data/flutter_assets/assets'
           New-Item -ItemType Directory -Force -Path $assets | Out-Null
